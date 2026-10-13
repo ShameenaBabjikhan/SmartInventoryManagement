@@ -67,14 +67,6 @@ pipeline {
             }
         }
         
-stage('Test Ansible Access') {
-    steps {
-        echo 'Checking Ansible access through WSL...'
-        bat '''
-            wsl.exe -d Ubuntu -- ansible --version
-        '''
-    }
-}
         stage('Build Docker Image') {
             steps {
                 echo 'Building the tested application image...'
