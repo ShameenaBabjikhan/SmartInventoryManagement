@@ -19,25 +19,31 @@ pipeline {
         stage('Environment Check') {
             steps {
                 echo 'Checking installed tools...'
+
                 bat 'git --version'
                 bat '"%PYTHON_EXE%" --version'
                 bat '"%DOCKER_EXE%" --version'
                 bat '"%DOCKER_EXE%" info'
+                bat '"%DOCKER_EXE%" compose version'
             }
         }
 
         stage('Install Dependencies') {
             steps {
                 echo 'Creating Python virtual environment...'
+
                 bat '"%PYTHON_EXE%" -m venv .venv'
 
                 echo 'Upgrading pip...'
+
                 bat '.venv\\Scripts\\python.exe -m pip install --upgrade pip'
 
                 echo 'Installing application dependencies...'
+
                 bat '.venv\\Scripts\\python.exe -m pip install -r backend\\requirements.txt'
 
                 echo 'Installing pytest...'
+
                 bat '.venv\\Scripts\\python.exe -m pip install pytest'
             }
         }
@@ -45,6 +51,7 @@ pipeline {
         stage('Run Automated Tests') {
             steps {
                 echo 'Running application tests...'
+
                 bat '.venv\\Scripts\\python.exe -m pytest -v'
             }
         }
@@ -52,32 +59,33 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo 'Building the tested application image...'
+
                 bat '"%DOCKER_EXE%" build -t smart-inventory-app:%BUILD_NUMBER% .'
             }
         }
 
         stage('Prepare Deployment Image') {
             steps {
-                echo 'Tagging the tested image for the existing Compose service...'
+                echo 'Tagging the tested image for Docker Compose...'
+
                 bat '"%DOCKER_EXE%" tag smart-inventory-app:%BUILD_NUMBER% %COMPOSE_IMAGE%'
             }
         }
 
         stage('Deploy Application') {
             steps {
-                echo 'Deploying the tested image with the existing Compose configuration...'
+                echo 'Deploying the tested image using the existing Compose project...'
 
-                // Use the existing Compose project and named database volume.
-                // Do not use "down -v".
                 bat '''
-                    cd /d "%PROJECT_DIR%" && "%DOCKER_EXE%" compose up -d --no-build
+                    cd /d "%PROJECT_DIR%"
+                    "%DOCKER_EXE%" --context default compose up --detach --no-build
                 '''
             }
         }
 
         stage('Health Check') {
             steps {
-                echo 'Waiting for the deployed application to become healthy...'
+                echo 'Checking application health...'
 
                 powershell '''
                     $ErrorActionPreference = "Stop"
@@ -97,14 +105,17 @@ pipeline {
                             }
                         }
                         catch {
-                            Write-Host "Attempt $i failed. Retrying..."
+                            Write-Host "Health check attempt $i failed."
+                            Write-Host $_.Exception.Message
                         }
 
-                        Start-Sleep -Seconds 5
+                        if (-not $healthy) {
+                            Start-Sleep -Seconds 5
+                        }
                     }
 
                     if (-not $healthy) {
-                        throw "Deployment health check failed."
+                        throw "Application health check failed after retries."
                     }
                 '''
             }
@@ -112,7 +123,7 @@ pipeline {
 
         stage('Verify Inventory API') {
             steps {
-                echo 'Checking that the inventory API responds...'
+                echo 'Verifying inventory products API...'
 
                 powershell '''
                     $ErrorActionPreference = "Stop"
