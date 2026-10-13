@@ -9,8 +9,15 @@ pipeline {
 
     environment {
         PYTHON_EXE = 'C:\\Users\\Shameena\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
+
         DOCKER_EXE = 'C:\\Users\\Shameena\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe'
+
+        COMPOSE_EXE = 'C:\\Users\\Shameena\\.docker\\cli-plugins\\docker-compose.exe'
+
+        DOCKER_CONFIG = 'C:\\Users\\Shameena\\.docker'
+
         PROJECT_DIR = 'C:\\Users\\Shameena\\SmartInventoryManagement'
+
         COMPOSE_IMAGE = 'smartinventorymanagement-smart-inventory'
     }
 
@@ -21,10 +28,14 @@ pipeline {
                 echo 'Checking installed tools...'
 
                 bat 'git --version'
+
                 bat '"%PYTHON_EXE%" --version'
+
                 bat '"%DOCKER_EXE%" --version'
+
                 bat '"%DOCKER_EXE%" info'
-                bat '"%DOCKER_EXE%" compose version'
+
+                bat '"%COMPOSE_EXE%" version'
             }
         }
 
@@ -50,7 +61,7 @@ pipeline {
 
         stage('Run Automated Tests') {
             steps {
-                echo 'Running application tests...'
+                echo 'Running automated application tests...'
 
                 bat '.venv\\Scripts\\python.exe -m pytest -v'
             }
@@ -74,11 +85,12 @@ pipeline {
 
         stage('Deploy Application') {
             steps {
-                echo 'Deploying the tested image using the existing Compose project...'
+                echo 'Deploying the application using Docker Compose...'
 
                 bat '''
                     cd /d "%PROJECT_DIR%"
-                    "%DOCKER_EXE%" --context default compose up --detach --no-build
+
+                    "%COMPOSE_EXE%" --context default -f compose.yaml up --detach --no-build
                 '''
             }
         }
@@ -123,7 +135,7 @@ pipeline {
 
         stage('Verify Inventory API') {
             steps {
-                echo 'Verifying inventory products API...'
+                echo 'Verifying the inventory products API...'
 
                 powershell '''
                     $ErrorActionPreference = "Stop"
@@ -133,6 +145,7 @@ pipeline {
                         -TimeoutSec 10
 
                     Write-Host "Inventory API responded successfully."
+
                     $response | ConvertTo-Json -Depth 5
                 '''
             }
