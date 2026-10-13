@@ -1,0 +1,14 @@
+services:
+  smart-inventory:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smart-inventory-app
+    ports:
+      - "5001:5000"
+    volumes:
+      - inventory_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  inventory_data:
