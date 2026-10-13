@@ -11,14 +11,14 @@ pipeline {
         stage('Environment Check') {
             steps {
                 bat 'git --version'
-                bat 'python --version'
+                bat '"C:\\Users\\Shameena\\AppData\\Local\\Programs\\Python\\Python313\\python.exe" --version'
                 bat 'docker --version'
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                bat 'python -m venv .venv'
+                bat '"C:\\Users\\Shameena\\AppData\\Local\\Programs\\Python\\Python313\\python.exe" -m venv .venv'
                 bat '.venv\\Scripts\\python.exe -m pip install --upgrade pip'
                 bat '.venv\\Scripts\\python.exe -m pip install -r backend\\requirements.txt'
                 bat '.venv\\Scripts\\python.exe -m pip install pytest'
