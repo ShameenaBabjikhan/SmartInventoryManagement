@@ -1,0 +1,69 @@
+---
+- name: Deploy Smart Inventory Management System
+  hosts: local
+  connection: local
+  gather_facts: false
+
+  vars:
+    project_dir: /mnt/c/Users/Shameena/SmartInventoryManagement
+    compose_file: /mnt/c/Users/Shameena/SmartInventoryManagement/compose.yaml
+    health_url: http://localhost:5001/health
+    products_url: http://localhost:5001/api/products
+
+  tasks:
+    - name: Verify Docker is accessible
+      ansible.builtin.command:
+        cmd: docker info
+      changed_when: false
+
+    - name: Validate Docker Compose configuration
+      ansible.builtin.command:
+        cmd: docker compose -f compose.yaml config --quiet
+        chdir: "{{ project_dir }}"
+      changed_when: false
+
+    - name: Deploy application using Docker Compose
+      ansible.builtin.command:
+        cmd: docker compose -f compose.yaml up -d --no-build
+        chdir: "{{ project_dir }}"
+      register: deploy_result
+      changed_when: >-
+        'Creating' in deploy_result.stdout or
+        'Recreating' in deploy_result.stdout or
+        'Starting' in deploy_result.stdout
+
+    - name: Wait for application health check
+      ansible.builtin.uri:
+        url: "{{ health_url }}"
+        method: GET
+        status_code: 200
+        return_content: true
+      register: health_result
+      retries: 12
+      delay: 5
+      until:
+        - health_result.status == 200
+        - health_result.json.status == "healthy"
+
+    - name: Verify inventory products API
+      ansible.builtin.uri:
+        url: "{{ products_url }}"
+        method: GET
+        status_code: 200
+        return_content: true
+      register: products_result
+      retries: 3
+      delay: 2
+      until: products_result.status == 200
+
+    - name: Display application health
+      ansible.builtin.debug:
+        var: health_result.json
+
+    - name: Display inventory API verification
+      ansible.builtin.debug:
+        msg: "Inventory API responded successfully."
+
+    - name: Deployment summary
+      ansible.builtin.debug:
+        msg: "SUCCESS: Ansible deployment and verification completed."
