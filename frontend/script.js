@@ -596,9 +596,9 @@ $("movementForm").addEventListener("submit", async e => {
       method: "POST",
       body: JSON.stringify({
         product_id: productId,
-        movement_type: type,
-        quantity: qty,
-        note
+        type: type,
+        qty: qty,
+        note:note
       })
     });
 
